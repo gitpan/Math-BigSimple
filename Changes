@@ -1,0 +1,7 @@
+Module Math::BigSimple changes log.
+-----------------------------------
+11.11.2004 - version 1.0: basic
+functions are available, now there
+are only "soft" requirements of
+number length. But everything works.
+:-)

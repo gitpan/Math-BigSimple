@@ -1,0 +1,15 @@
+The Math::BigSimple 1.0 Readme.
+
+The Math::BigSimple module can generate big simple numbers;
+it's very usefull for cryptographic programs which follow
+the open key principles(like RSA, IDEA, PGP and others).
+It's interface is VERY easy to use and it works enough fast
+even for the real-time applications.
+
+Author: Edward Chernenko<specpc@yandex.ru>.
+Russian documentation may be found on my official website
+(www.aportal.org)
+
+This module should work on pure-perl systems.
+
+License: Artistic License(the same as the license of perl).
