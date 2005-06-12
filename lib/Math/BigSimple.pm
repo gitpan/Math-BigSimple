@@ -1,61 +1,98 @@
 package Math::BigSimple;
-$VERSION = "1.0";
 require Exporter;
 use Math::BigInt;
 @ISA = qw(Exporter);
 @EXPORT = qw(new);
-$VERSION = 0.01;
+@EXPORT_OK = qw(is_simple make_simple);
+$VERSION = "1.1";
+$_DEFAULT_CHECKS = 4;
+$_DEFAULT_RAND = sub { rand() };
 sub new
 {
-	my($class, %param) = @_;
-	my $CHECKS = $param{'Checks'};
-	$CHECKS = 4 if(!$CHECKS);
-	my $LENGTH = $param{'Length'};
-	die "Length not defined or incorrect" if($LENGTH + 1 == 1);
-	my $RAND = $param{'Random'};
-	$RAND = sub{rand} if((ref($RAND) ne "CODE") || (!$RAND));
-	my $ref = [$CHECKS, $LENGTH, $RAND];
+	my $class = shift;
+	my($LENGTH, $CHECKS, $RAND);
+	my %param = @_ if(@_ % 2 == 0);
+	if(exists $param{Length}) # Compability mode (with 1.0 version).
+	{
+		$CHECKS = $param{'Checks'};
+		$LENGTH = $param{'Length'};
+		$RAND = $param{'Random'};
+	}
+	else
+	{
+		($LENGTH, $CHECKS, $RAND) = @_;
+	}
+	if((!$LENGTH) || (int($LENGTH) != $LENGTH))
+	{
+		die "[error] " . __PACKAGE__ . " $VERSION : number length not specified.";
+	}
+	$CHECKS = $Math::BigSimple::_DEFAULT_CHECKS if((!$CHECKS) || (int($CHECKS) != $CHECKS));
+	$RAND = $Math::BigSimple::_DEFAULT_RAND if((!$RAND) || (ref($RAND) != 'CODE'));
+
+	my $ref = [$LENGTH, $CHECKS, $RAND]; # [$CHECKS, $LENGTH, $RAND] in 1.0.
 	bless $ref, $class;
 	return $ref;
 }
 sub make
 {
 	my $ref = shift;
-	my($CHECKS, $LENGTH, $RAND) = @$ref;
-	my $_2 = Math::BigInt -> new(2);
-	my $p;
-	while($p = int(&$RAND() * (10 ** $LENGTH)))
+	my($LENGTH, $CHECKS, $RAND) = @$ref;
+	while(1)
 	{
-		next if(!$p);
-		my $coof = $p << 4;
-		my $simple = 1;
-		my $_p = Math::BigInt -> new($p);
-		my $_i1 = Math::BigInt -> new($p - 1);
-		my $_i2 = $_i1 -> bdiv($_2);
-		my $count;
-		for($count = 0; $count < $CHECKS; $count ++)
+		my $p = &$RAND();
+		if(int($p * 10) == 0)
 		{
-			$simple = 0;
-			last if($p % 2 == 0);
-			my $x = Math::BigInt -> new(int(&$RAND() * $coof) % $p);
-			next if($x -> is_zero()); 
-			
-			my $func = $x -> bmodpow($_i1, $_p);
-			$func = $func -> bstr();
-			last if(($func != 1)&&($func != $p - 1));
-		
-			$func = $x -> bmodpow($_i2, $_p);
-			$func = $func -> bstr();
-			last if(($func != 1)&&($func != $p - 1));	
-			
-			$simple = 1;
+			my $repl = 0;
+			while(!$repl)
+			{
+				$repl = int(rand() * 10);
+			}
+			$p += $repl / 10;
 		}
-		if($simple == 1)
-		{
-			return $p;
-		}
+		$p = int($p * (10 ** $LENGTH));
+
+		return $p if(Math::BigSimple::is_simple($p) == 1);
 	}
-	return -1;
+}
+sub is_simple
+{
+	my($number, $CHECKS) = @_;
+	return -1 if((!$number) || (int($number) != $number));
+	$CHECKS = $Math::BigSimple::_DEFAULT_CHECKS if(!$CHECKS);
+
+	my $_2 = Math::BigInt->new(2);
+	my $coof = $number << 4;
+	my $simple = 1;
+	my $_p = Math::BigInt->new($number);
+	my $_i1 = Math::BigInt->new($number-1);
+	my $_i2 = $_i1->bdiv($_2);
+
+	for(my $count = 0; $count < $CHECKS; $count++)
+	{
+		$simple = 0;
+		last if($number % 2 == 0);
+		my $x = Math::BigInt->new(int(&$Math::BigSimple::_DEFAULT_RAND() * $coof) % $number);
+		next if($x->is_zero());
+
+		my $func = $x->bmodpow($_i1, $_p);
+		$func = $func->bstr();
+		last if(($func != 1) && ($func != $number-1));
+
+		$simple = 1;
+	}
+	if($simple == 1)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+sub make_simple
+{
+	my $g = Math::BigSimple->new(shift);
+	return $g->make();
 }
 __END__
 
@@ -65,10 +102,10 @@ Math::BigSimple
 
 =head1 VERSION
 
-Version number is 1.0(this is the first BigSimple version).
-It isn't enough tested by other people but my own tests showed such a good stability...
+Version number is 1.1(this is the second BigSimple version).
+Looks stable.
 
-It was written 11.11.2004.
+It was written 12.06.2005.
 
 =head1 DESCRIPTION
 
@@ -77,65 +114,70 @@ open key principles(like RSA, IDEA, PGP and others). It's interface is VERY easy
 
 =head1 SYNTAX
 
- use BigSimple;
- $bs = BigSimple -> new(
- 	Length => 8,
- 	Checks => 5
- );
- print $bs -> make();
+ # OOP interface
+ use Math::BigSimple;
+ $bs = Math::BigSimple->new(8);  # Constructor
+ $bs = Math::BigSimple->new(Length => 8, Checks => 5); # Old style
+ $simple = $bs->make(); # Generation
+
+ # Procedure interface.
+ use Math::BigSimple qw(is_simple make_simple);
+ print "SIMPLE!!!" if(is_simple(84637238096) == 1); # Test number
+ $simple_number = make_simple($length); # Easy generation
 
 =head1 FUNCTIONS
 
-=head2 new(%params)
+=head2 OOP interface
 
-This function constructs the simple numbers generator with special parameters. The easiest form of usage is
+=head3 new(@params)
 
- $bs = new BigSimple(Length => $length);
+$generator = Math::BigSimple->new(@options);
 
-when maximum key length is set to $length and every number should be tested 4 times. You also may change it using the 'Checks' parameter, like in the example below:
+Initializes number generator; first parameter is required number length
+and optional second is number of validation checks (default 4).
+Also supported old format of params(1.0) - the hash with 'Length' and
+'Checks' elements (don't use it).
 
- $bs = new BigSimple(
- 	Length => $length,
- 	Checks => 2 
- );
+=head3 make
 
-That should work faster twice.
+$simple_number = $generator->make();
 
-And the last optional parameter, 'Random', when it's value is a reference to function which returns a random number, could change internal scheme of receiving numbers for tests.
+Returns number as specified in $generator.
 
-=head2 make
+=head2 Procedure interface
 
-Return a big simple number.
+=head3 is_simple($number)
 
-=head1 KNOWN BUGS
+$if_is_simple = is_simple($number);
 
-The main and the only 'feauture' that is good to be fixed is that this module can't garrantee that the length of the generated number is exactly required length: it may be shorter. But for the most of the tasks it isn't a problem...
+Returns 1 if $number is simple.
 
-And the process of generating numbers longer then 15 decimal symbols lasts MUCH longer with each next char.
+=head3 make_simple
+
+$simple_number = make_simple($length);
+
+Returns a simple number of specified length. This is really the
+easiest way to get it.
+
+=head1 LIMITATIONS
+
+Generation of number with 15 or more digits is slow.
+
+Number 2 won't be recognized as simple.
 
 =head1 AUTHOR
 
-Here is a pure information about the author of this module:
-
- Edward Chernenko <specpc@yandex.ru> - the professional PERL programmer.
- Lives in the Russian Federation, Obninsk city.
- Birthday date: 19.08.1989.
-
-For more info you may visit http://www.aportal.org/ website(warning:
-remember that this is available for russian-speaking persons only ;-) - and it's absolutely clear why).
+ Edward Chernenko <edwardspec@yahoo.com>.
+ Perl programmer & Linux system administrator.
 
 =head1 COPYRIGHT
 
 Copyright (C)Edward Chernenko.
-This program may be used with the same license as the perl Artistic.
+This program is protected by Artistic License
+and can be used and/or distributed by the same
+rules as perl interpreter.
 All right reserved.
-
- !!!: This algorithm was taken from the Hasanov's family
- !!!: website(www.hasanov.ru).
 
 =head1 LOOK ALSO
 
-Crypt::RSA - the open key cryptographic module.
-
-There is(IMPORTANT FOR RUSSIAN_SPEAKING PERSONS!!) a russian
-documentation on my offical website.
+Math::BigInt
