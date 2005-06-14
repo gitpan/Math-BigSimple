@@ -4,7 +4,7 @@ use Math::BigInt;
 @ISA = qw(Exporter);
 @EXPORT = qw(new);
 @EXPORT_OK = qw(is_simple make_simple);
-$VERSION = "1.1";
+$VERSION = "1.1a";
 $_DEFAULT_CHECKS = 4;
 $_DEFAULT_RAND = sub { rand() };
 sub new
@@ -102,10 +102,10 @@ Math::BigSimple
 
 =head1 VERSION
 
-Version number is 1.1(this is the second BigSimple version).
+Version number is 1.1a.
 Looks stable.
 
-It was written 12.06.2005.
+This is 1.1 version with improved test 3, written 13.06.2005.
 
 =head1 DESCRIPTION
 
@@ -150,7 +150,7 @@ Returns number as specified in $generator.
 
 $if_is_simple = is_simple($number);
 
-Returns 1 if $number is simple.
+Returns 1 if $number is simple. Don't use with small numbers.
 
 =head3 make_simple
 
@@ -164,6 +164,8 @@ easiest way to get it.
 Generation of number with 15 or more digits is slow.
 
 Number 2 won't be recognized as simple.
+
+Some small numbers (for example, 3 and 7) not always pass the test.
 
 =head1 AUTHOR
 
